@@ -890,10 +890,10 @@ pub enum PerformanceLevel {
 pub struct PerformanceLevelConfig {
     #[schema(flag = "real-time")]
     #[schema(strings(display_name = "CPU"))]
-    pub cpu: PerformanceLevel,
+    pub cpu: Switch<PerformanceLevel>,
     #[schema(flag = "real-time")]
     #[schema(strings(display_name = "GPU"))]
-    pub gpu: PerformanceLevel,
+    pub gpu: Switch<PerformanceLevel>,
 }
 
 #[derive(SettingsSchema, Serialize, Deserialize, Clone, PartialEq)]
@@ -1292,7 +1292,11 @@ Tilted: the world gets tilted when long pressing the oculus button. This is usef
     #[schema(flag = "steamvr-restart")]
     pub emulation_mode: HeadsetEmulationMode,
 
-    pub performance_level: Switch<PerformanceLevelConfig>,
+    #[schema(strings(help = r#"Power Savings: Level 0 to 4.
+        Sustained Low: Level 2 to 4.
+        Sustained High: Level 4 to 6 (varies depending on model).
+        Boost: 4 to 8 (varies depending on model)."#))]
+    pub performance_level: PerformanceLevelConfig,
 
     #[schema(flag = "steamvr-restart")]
     #[schema(strings(display_name = "Extra OpenVR properties"))]
@@ -1939,14 +1943,17 @@ pub fn session_settings_default() -> SettingsDefault {
                 },
                 variant: HeadsetEmulationModeDefaultVariant::Quest2,
             },
-            performance_level: SwitchDefault {
-                enabled: false,
-                content: PerformanceLevelConfigDefault {
-                    cpu: PerformanceLevelDefault {
-                        variant: PerformanceLevelDefaultVariant::SustainedLow,
+            performance_level: PerformanceLevelConfigDefault {
+                cpu: SwitchDefault {
+                    enabled: false,
+                    content: PerformanceLevelDefault {
+                        variant: PerformanceLevelDefaultVariant::PowerSavings,
                     },
-                    gpu: PerformanceLevelDefault {
-                        variant: PerformanceLevelDefaultVariant::SustainedLow,
+                },
+                gpu: SwitchDefault {
+                    enabled: false,
+                    content: PerformanceLevelDefault {
+                        variant: PerformanceLevelDefaultVariant::PowerSavings,
                     },
                 },
             },

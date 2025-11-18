@@ -95,7 +95,7 @@ fn to_xr_time(timestamp: Duration) -> xr::Time {
     xr::Time::from_nanos(timestamp.as_nanos() as _)
 }
 
-fn convert_performance_level(level: PerformanceLevel) -> xr::PerfSettingsLevelEXT {
+fn to_perf_settings_level(level: PerformanceLevel) -> xr::PerfSettingsLevelEXT {
     match level {
         PerformanceLevel::PowerSavings => xr::PerfSettingsLevelEXT::POWER_SAVINGS,
         PerformanceLevel::SustainedLow => xr::PerfSettingsLevelEXT::SUSTAINED_LOW,
@@ -107,25 +107,15 @@ fn convert_performance_level(level: PerformanceLevel) -> xr::PerfSettingsLevelEX
 fn set_performance_level(
     xr_instance: &xr::Instance,
     xr_session: &xr::Session<xr::OpenGlEs>,
-    cpu_level: PerformanceLevel,
-    gpu_level: PerformanceLevel,
+    domain: xr::PerfSettingsDomainEXT,
+    level: PerformanceLevel,
 ) {
     if let Some(performance_settings) = xr_instance.exts().ext_performance_settings {
-        let set_performance_level = performance_settings.perf_settings_set_performance_level;
-
-        let xr_cpu_level = convert_performance_level(cpu_level);
-        let xr_gpu_level = convert_performance_level(gpu_level);
-
         unsafe {
-            set_performance_level(
+            (performance_settings.perf_settings_set_performance_level)(
                 xr_session.as_raw(),
-                xr::PerfSettingsDomainEXT::CPU,
-                xr_cpu_level,
-            );
-            set_performance_level(
-                xr_session.as_raw(),
-                xr::PerfSettingsDomainEXT::GPU,
-                xr_gpu_level,
+                domain,
+                to_perf_settings_level(level),
             );
         }
     }
@@ -369,15 +359,18 @@ pub fn entry_point() {
             .write()
             .select_sources(&lobby_interaction_sources);
 
-        if let Some(performance_settings) = xr_instance.exts().ext_performance_settings {
-            let level = xr::PerfSettingsLevelEXT::POWER_SAVINGS;
-
-            let set_performance_level = performance_settings.perf_settings_set_performance_level;
-            unsafe {
-                set_performance_level(xr_session.as_raw(), xr::PerfSettingsDomainEXT::CPU, level);
-                set_performance_level(xr_session.as_raw(), xr::PerfSettingsDomainEXT::GPU, level);
-            }
-        }
+        set_performance_level(
+            &xr_instance,
+            &xr_session,
+            xr::PerfSettingsDomainEXT::CPU,
+            PerformanceLevel::PowerSavings,
+        );
+        set_performance_level(
+            &xr_instance,
+            &xr_session,
+            xr::PerfSettingsDomainEXT::GPU,
+            PerformanceLevel::PowerSavings,
+        );
 
         let mut session_running = false;
         let mut stream_context = None::<StreamContext>;
@@ -527,12 +520,21 @@ pub fn entry_point() {
                             passthrough_layer = None;
                         }
 
-                        if let Some(performance_level) = &config.perfromance_level {
+                        if let Some(cpu_performance_level) = &config.cpu_performance_level {
                             set_performance_level(
                                 &xr_instance,
                                 &xr_session,
-                                performance_level.cpu.clone(),
-                                performance_level.gpu.clone(),
+                                xr::PerfSettingsDomainEXT::CPU,
+                                cpu_performance_level.clone(),
+                            );
+                        }
+
+                        if let Some(gpu_performance_level) = &config.gpu_performance_level {
+                            set_performance_level(
+                                &xr_instance,
+                                &xr_session,
+                                xr::PerfSettingsDomainEXT::GPU,
+                                gpu_performance_level.clone(),
                             );
                         }
 
